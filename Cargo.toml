@@ -1,0 +1,26 @@
+[package]
+
+name = "forms-maud-iron"
+version = "0.0.1"
+authors = [ "vycb <you@example.com>" ]
+license = "MIT"
+
+[[bin]]
+
+name = "forms_maud_iron"
+
+[dependencies]
+iron = { version = "*", default-features = false }
+plugin = "*"
+log = "*"
+env_logger = "*"
+params = "*"
+
+[dependencies.maud]
+path = "../maud/maud"
+
+[dependencies.maud_macros]
+path = "../maud/maud_macros"
+
+[dependencies.maud-iron]
+path = "../maud-iron"
