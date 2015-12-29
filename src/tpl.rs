@@ -15,34 +15,35 @@ pub fn getform<'a>(map: &'a HashMap<String,String>)-> String {
 						
 				}
 				body {
-	    		p { "Form, " $map["name"] "!" }
-			    h1 {"test of " $map["greating"] "!"}
-			    
-	    		form method="post" enctype="multipart/form-data" action="/form"{ 
-						
-						label for="sq" { "Search: " }
-						
-						input type="text" name="sq" id="sq" value=$sq /
-						br /
-						
-						label for="fname" { "Name: " }
-						
-						input type="text" name="fname" id="fname" value=$fname /
-						br /
-						
-						label for="image" { "Upload an image: " }
-						input type="file" name="image" id="image" /
-						br /
-						
-						input type="submit" value="Submit" id="submit" /
-	    			
-	    		}
-			    
-			    p {
+		    		p { "Form, " $map["name"] "!" }
+				    h1 {"test of " $map["greating"] "!"}
+				    
+		    		form method="post" enctype="multipart/form-data" action="/form"{ 
+							
+							label for="sq" { "Search: " }
+							
+							input type="text" name="sq" id="sq" value=$sq /
+							br /
+							
+							label for="fname" { "Name: " }
+							
+							input type="text" name="fname" id="fname" value=$fname /
+							br /
+							
+							label for="image" { "Upload an image: " }
+							input type="file" name="image" id="image" /
+							br /
+							
+							input type="submit" value="Submit" id="submit" /
+		    			
+		    		}
+				    
+				    p {
 			      "curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly"
 						br /
 						"curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- --channel=beta"
 					}
+				    img src={"image?n="$map["image"]}  /
 				}
 			}
 		}).unwrap();
