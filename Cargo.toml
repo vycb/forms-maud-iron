@@ -15,6 +15,9 @@ plugin = "*"
 log = "*"
 env_logger = "*"
 params = "*"
+staticfile = "*"
+mount = "*"
+url ="*"
 
 [dependencies.maud]
 path = "../maud/maud"

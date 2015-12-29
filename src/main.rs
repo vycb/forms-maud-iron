@@ -8,14 +8,26 @@ extern crate iron;
 extern crate maud_iron as mde;
 extern crate params;
 use std::collections::HashMap;
+use std::path::Path;
+use std::error::Error;
+use std::fmt;
 mod tpl;
 use iron::prelude::*;
 use iron::mime::Mime;
-use iron::{Handler,status};
+use iron::{Handler,status, Url};
+use iron::typemap;
+use iron::modifiers::Redirect;
+#[derive(Copy, Clone)]
+pub struct OriginalUrl;
+impl typemap::Key for OriginalUrl { type Value = Url; }
 use params::Params;
 use mde::{Template, MaudEngine};
-use std::io::prelude::*;
-use std::fs::File;
+use std::fs;
+extern crate mount;
+extern crate url;
+mod requested_path;
+use requested_path::RequestedPath;
+//use mount::Mount;
 
 fn form(req: &mut Request) -> IronResult<Response> {
 	let mut resp = Response::new();
@@ -64,18 +76,64 @@ fn form(req: &mut Request) -> IronResult<Response> {
 }
 
 
+fn files(req: &mut Request) -> IronResult<Response> {
+	use std::io;
+	let requested_path = RequestedPath::new(Path::new(""), req);
+	
+	 let metadata = match fs::metadata(&requested_path.path) {
+	    Ok(meta) => meta,
+	    Err(e) => {
+	        let status = match e.kind() {
+	            io::ErrorKind::NotFound => status::NotFound,
+	            io::ErrorKind::PermissionDenied => status::Forbidden,
+	            _ => status::InternalServerError,
+	        };
+	
+	        return Err(IronError::new(e, status))
+	    },
+	};
+	 
+  	// If the URL ends in a slash, serve the file directly.
+    // Otherwise, redirect to the directory equivalent of the URL.
+    if requested_path.should_redirect(&metadata, req) {
+        // Perform an HTTP 301 Redirect.
+        let mut redirect_path = match req.extensions.get::<OriginalUrl>() {
+            None => &req.url,
+            Some(original_url) => original_url,
+        }.clone();
+
+        // Append the trailing slash
+        //
+        // rust-url automatically turns an empty string in the last
+        // slot in the path into a trailing slash.
+        redirect_path.path.push("".to_string());
+
+        return Ok(Response::with((status::MovedPermanently,
+                                  format!("Redirecting to {}", redirect_path),
+                                  Redirect(redirect_path))));
+    }
+
+	match requested_path.get_file(&metadata) {
+        // If no file is found, return a 404 response.
+        None => Err(IronError::new(NoFile, status::NotFound)),
+        Some(path) => {
+            let path: &Path = &path;
+            Ok(Response::with((status::Ok, path)))
+        },
+    }
+}
+
 fn image(_: &mut Request) -> IronResult<Response> {
+	use std::fs::File;
     let content_type = "image/jpeg".parse::<Mime>().unwrap();
     
-    let mut f = File::open("orange.jpg").unwrap();
-	let mut s = String::new();
-	f.read_to_string(&mut s).unwrap();
+    let f = File::open("files/orange.jpg").unwrap();
 	
     let mut resp = Response::new();
- 		resp.set_mut(content_type)
-	 		.set_mut(s.as_bytes())
-	 		.set_mut(status::Ok);
+ 	resp.set_mut(content_type)
+	.set_mut((status::Ok, f));
 	Ok(resp)
+
 }
 
 fn index(_: &mut Request) -> IronResult<Response> {
@@ -98,7 +156,10 @@ fn main() {
 	router.add_route("".to_string(), index);
 	
 	router.add_route("form".to_string(), form);
+
+//	router.add_route("files".to_string(), Static::new(Path::new("files/")));
 	
+	router.add_route("files".to_string(), files);
 	router.add_route("image".to_string(), image);
 	
 	router.add_route("hello/again".to_string(), |_: &mut Request| {
@@ -110,8 +171,12 @@ fn main() {
 	});
 	
 	let mut chain = Chain::new(router);
-		let mde = MaudEngine::new();
-	 chain.link_after(mde);
+	
+// 	let mut mount = Mount::new();
+//	mount.mount("/files", Static::new(Path::new("files/")));
+ 	
+	let mde = MaudEngine::new();
+	chain.link_after(mde);
 	
 	Iron::new(chain).http("wram:8080").unwrap();
 }
@@ -132,9 +197,26 @@ impl Router {
 
 impl Handler for Router {
     fn handle(&self, req: &mut Request) -> IronResult<Response> {
-        match self.routes.get(&req.url.path.join("/")) {
+//		let fp = req.url.path.join("/");
+    	let p1 = req.url.path[0].clone();
+        match self.routes.get(&p1) {
             Some(handler) => handler.handle(req),
             None => Ok(Response::with(status::NotFound))
         }
     }
 }
+
+#[derive(Debug)]
+pub struct NoFile;
+
+impl Error for NoFile {
+    fn description(&self) -> &str { "File not found" }
+}
+
+impl fmt::Display for NoFile {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(self.description())
+    }
+}
+
+
