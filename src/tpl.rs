@@ -1,6 +1,7 @@
 use std::collections::HashMap;
+use sqlite::{FileData};
 
-pub fn getform<'a>(map: &'a HashMap<String,String>)-> String {
+pub fn getform<'a>(map: &'a HashMap<String,String>, rows: Box<Vec<FileData>>)-> Box<String> {
 	let null = "".to_string();
 	let mut buffer = String::new();
 	let sq = if map.contains_key(&"sq".to_string()) { map.get(&"sq".to_string()).unwrap() }else{ &null };
@@ -38,17 +39,17 @@ pub fn getform<'a>(map: &'a HashMap<String,String>)-> String {
 		    			
 		    		}
 				    
-				    p {
-			      "curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly"
-						br /
-						"curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- --channel=beta"
-					}
-				    img src={"image?n="$map["image"]}  /
+				    #for i in 0..rows.len() as usize {
+					    div {
+							span $rows.get(i).unwrap().name
+					    	img src={"image?id="$rows.get(i).unwrap().id}  /
+						}
+				    }
 				}
 			}
 		}).unwrap();
 	
-	buffer
+	box buffer
 }
 
 
