@@ -15,9 +15,8 @@ plugin = "*"
 log = "*"
 env_logger = "*"
 params = "*"
-staticfile = "*"
-mount = "*"
 url ="*"
+rusqlite = "*"
 
 [dependencies.maud]
 path = "../maud/maud"
